@@ -8,8 +8,8 @@ export const APP_INFO = {
   tagline: 'Community Litter Reporting',
   description: 'Identify litter hotspots and coordinate community cleanup efforts.',
   currentPhase: {
-    number: 1,
-    title: 'Project Foundation & UI',
+    number: 2,
+    title: 'Google Maps Integration',
     status: 'In Progress',
   },
 };
@@ -86,15 +86,15 @@ export const ROADMAP_PHASES = Object.freeze([
     phase: 1,
     title: 'Project Foundation & UI',
     description: 'Vite + React + Tailwind modular architecture, responsive map-first layout, and report form boundaries.',
-    status: 'Current Milestone',
-    active: true,
+    status: 'Completed',
+    active: false,
   },
   {
     phase: 2,
     title: 'Google Maps Integration',
     description: 'Mount @vis.gl/react-google-maps, geolocation anchoring, and click-to-capture coordinate handling.',
-    status: 'Planned',
-    active: false,
+    status: 'Current Milestone',
+    active: true,
   },
   {
     phase: 3,

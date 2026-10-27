@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Download } from 'lucide-react';
 import Button from '../ui/Button.jsx';
 import Badge from '../ui/Badge.jsx';
 
@@ -32,7 +32,7 @@ export function AppHeader({ onOpenReport, isReportOpen = false }) {
                 Smart Trash Map
               </span>
               <Badge variant="success" size="xs">
-                Milestone 1
+                Milestone 2
               </Badge>
             </div>
             <p className="text-xs text-slate-500 font-medium hidden sm:block mt-0.5">
@@ -41,8 +41,20 @@ export function AppHeader({ onOpenReport, isReportOpen = false }) {
           </div>
         </div>
 
-        {/* Primary Action: Report Litter */}
-        <div className="flex items-center gap-2.5">
+        {/* Action Controls */}
+        <div className="flex items-center gap-2">
+          {/* Download Project ZIP */}
+          <a
+            href="/smart-trash-map.zip"
+            download="smart-trash-map.zip"
+            className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 shadow-2xs transition active:scale-95"
+            title="Download complete project ZIP archive"
+          >
+            <Download className="w-3.5 h-3.5 text-slate-500" aria-hidden="true" />
+            <span className="hidden sm:inline">Download</span> ZIP
+          </a>
+
+          {/* Primary Action: Report Litter */}
           <Button
             type="button"
             variant="primary"

@@ -78,8 +78,8 @@ export function ReportForm({
               </div>
               <p className="text-slate-600 leading-normal">
                 {hasCoordinates
-                  ? 'Selected location coordinates recorded for submission.'
-                  : 'Pin placement unlocks in Phase 2 with Google Maps. Form requires coordinates.'}
+                  ? 'Selected location coordinates recorded. Click the map to reposition.'
+                  : 'Click anywhere on the map to drop a pin and capture coordinates.'}
               </p>
             </div>
           </div>
@@ -131,10 +131,10 @@ export function ReportForm({
         <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600 space-y-0.5">
           <div className="flex items-center gap-1.5 font-semibold text-slate-800">
             <AlertCircle className="w-3.5 h-3.5 text-slate-500 shrink-0" aria-hidden="true" />
-            Milestone 1 State
+            Milestone 2 State
           </div>
           <p className="leading-relaxed text-[11px]">
-            Submission is locked until Phase 2 (coordinate selection) and Phase 3 (Supabase database persistence).
+            Map pin placement is active. Database persistence will connect in Phase 3 (Supabase).
           </p>
         </div>
       </div>
