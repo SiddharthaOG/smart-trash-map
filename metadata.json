@@ -1,0 +1,6 @@
+{
+  "name": "Smart Trash Map",
+  "description": "Community litter reporting platform connecting volunteers to coordinate cleanups and track litter hotspots.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
