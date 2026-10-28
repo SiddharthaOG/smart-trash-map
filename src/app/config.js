@@ -9,8 +9,8 @@ export const config = Object.freeze({
   app: {
     name: 'Smart Trash Map',
     version: '0.1.0-alpha',
-    phase: 2,
-    phaseName: 'Google Maps Integration',
+    phase: 3,
+    phaseName: 'Supabase Persistence',
     isProduction: Boolean(env.PROD),
   },
   maps: {

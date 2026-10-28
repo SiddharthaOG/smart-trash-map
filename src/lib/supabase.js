@@ -2,36 +2,63 @@
  * Supabase Client Boundary
  *
  * Single initialization boundary for Supabase data operations.
- * In Phase 3, this module initializes `@supabase/supabase-js` using config.supabase.
- * For Phase 1 (Foundation & UI), this module provides the contract and client accessor
- * without premature dependencies or unconfigured client crashes.
+ * Reads centralized configuration from config.supabase.
+ * Fails gracefully when credentials are not configured in the environment.
  */
 
+import { createClient } from '@supabase/supabase-js';
 import { config } from '../app/config.js';
 
 let supabaseClientInstance = null;
 
 /**
- * Returns true if Supabase credentials are configured in the environment.
+ * Returns true if Supabase URL and Anon Key are present and valid in configuration.
+ *
+ * @returns {boolean}
  */
 export function isSupabaseConfigured() {
-  return config.supabase.isConfigured;
+  return Boolean(
+    config.supabase.isConfigured &&
+    config.supabase.url &&
+    config.supabase.anonKey &&
+    !config.supabase.url.includes('your-project')
+  );
 }
 
 /**
- * Singleton client getter. In Phase 3, will instantiate createClient().
- * In Phase 1, returns null safely to prevent uncaught runtime errors.
+ * Singleton client getter.
+ * Initializes and returns the Supabase client instance if configured, or null otherwise.
+ *
+ * @returns {import('@supabase/supabase-js').SupabaseClient | null}
  */
 export function getSupabaseClient() {
-  if (!config.supabase.isConfigured) {
-    return null;
+  if (!isSupabaseConfigured()) {
+    return supabaseClientInstance; // may be null or mock client in test mode
   }
 
-  // Phase 3 integration hook:
-  // if (!supabaseClientInstance) {
-  //   const { createClient } = await import('@supabase/supabase-js');
-  //   supabaseClientInstance = createClient(config.supabase.url, config.supabase.anonKey);
-  // }
+  if (!supabaseClientInstance) {
+    supabaseClientInstance = createClient(
+      config.supabase.url,
+      config.supabase.anonKey,
+      {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+        },
+      }
+    );
+  }
 
   return supabaseClientInstance;
 }
+
+/**
+ * Overrides or resets the client instance for testing purposes.
+ *
+ * @param {any} [client] - Mock Supabase client or null to reset.
+ */
+export function setSupabaseClientForTesting(client = null) {
+  supabaseClientInstance = client;
+}
+
+export default getSupabaseClient;
