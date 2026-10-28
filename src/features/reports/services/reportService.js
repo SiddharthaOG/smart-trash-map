@@ -1,60 +1,154 @@
 /**
  * Report Data Access Service
  *
- * Encapsulates all read, write, and realtime subscription operations for litter reports.
+ * Encapsulates all read and write persistence operations for litter reports.
  * Presentation components consume this service instead of interacting with Supabase directly.
  *
- * In Phase 3 (Supabase Integration), these methods will perform real table queries:
- * - listReports -> supabase.from('trash_reports').select('*').order('created_at', { ascending: false })
- * - createReport -> supabase.from('trash_reports').insert([payload])
- * - subscribeReports -> supabase.channel('trash_reports_changes').on(...)
+ * M3 Implementation:
+ * - listReports: Fetches live reports from `trash_reports` ordered by `created_at DESC`.
+ * - createReport: Validates payload and inserts real record into `trash_reports`.
+ * - Handles missing configuration, validation failures, and database errors transparently.
  */
 
 import { getSupabaseClient, isSupabaseConfigured } from '../../../lib/supabase.js';
+import { validateReportDraft } from '../validation.js';
 
 /**
- * Fetches all community litter reports.
- * In Phase 1: Returns empty dataset with milestone metadata. No fake data.
+ * Fetches community litter reports from Supabase.
  *
- * @returns {Promise<{ data: Array, count: number, isConnected: boolean, phaseNotice: string }>}
+ * @param {object} [options]
+ * @param {import('@supabase/supabase-js').SupabaseClient} [options.client] - Optional client for dependency injection in tests
+ * @returns {Promise<{
+ *   data: Array<object>,
+ *   count: number,
+ *   isConnected: boolean,
+ *   missingConfig: boolean,
+ *   error: string | null,
+ *   message?: string
+ * }>}
  */
-export async function listReports() {
-  const client = getSupabaseClient();
+export async function listReports(options = {}) {
+  const client = options.client !== undefined ? options.client : getSupabaseClient();
+  const isConfigured = Boolean(options.client || isSupabaseConfigured());
 
-  if (!client || !isSupabaseConfigured()) {
+  if (!isConfigured || !client) {
     return {
       data: [],
       count: 0,
       isConnected: false,
-      phaseNotice: 'Database synchronization unlocks in Phase 3 with Supabase integration.',
+      missingConfig: true,
+      error: null,
+      message: 'Supabase credentials are not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to load live reports.',
     };
   }
 
-  return { data: [], count: 0, isConnected: false, phaseNotice: '' };
+  try {
+    const { data, error, count } = await client
+      .from('trash_reports')
+      .select('id, lat, lng, severity, description, status, created_at', { count: 'exact' })
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      return {
+        data: [],
+        count: 0,
+        isConnected: false,
+        missingConfig: false,
+        error: error.message || 'Database read error.',
+      };
+    }
+
+    return {
+      data: data || [],
+      count: count ?? (data?.length || 0),
+      isConnected: true,
+      missingConfig: false,
+      error: null,
+    };
+  } catch (err) {
+    return {
+      data: [],
+      count: 0,
+      isConnected: false,
+      missingConfig: false,
+      error: err.message || 'Network failure when connecting to Supabase.',
+    };
+  }
 }
 
 /**
- * Submits a new litter report.
- * In Phase 1: Explicitly rejects mock persistence so the UI cannot falsely claim success.
+ * Validates and submits a new litter report to Supabase.
  *
- * @param {{ coordinates: { lat: number, lng: number }, severity: number, description?: string }} reportData
- * @returns {Promise<{ success: boolean, message: string }>}
+ * @param {{
+ *   coordinates: { lat: number, lng: number },
+ *   severity: number,
+ *   description?: string
+ * }} reportData
+ * @param {object} [options]
+ * @param {import('@supabase/supabase-js').SupabaseClient} [options.client] - Optional client for dependency injection
+ * @returns {Promise<{ success: boolean, data: object }>}
  */
-export async function createReport(reportData) {
-  const client = getSupabaseClient();
-
-  if (!client || !isSupabaseConfigured()) {
-    throw new Error(
-      'Persistence is not available in Phase 1. Backend database connection will be established in Phase 3.'
-    );
+export async function createReport(reportData, options = {}) {
+  // 1. Validate payload before network request
+  const validation = validateReportDraft(reportData);
+  if (!validation.isValid) {
+    const errorDetails = Object.values(validation.errors).join(', ');
+    const err = new Error(`Report validation failed: ${errorDetails}`);
+    err.name = 'ValidationError';
+    err.errors = validation.errors;
+    throw err;
   }
 
-  return { success: false, message: 'Unconfigured' };
+  // 2. Check client configuration
+  const client = options.client !== undefined ? options.client : getSupabaseClient();
+  const isConfigured = Boolean(options.client || isSupabaseConfigured());
+
+  if (!isConfigured || !client) {
+    const err = new Error(
+      'Supabase persistence is unconfigured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your environment.'
+    );
+    err.name = 'ConfigurationError';
+    throw err;
+  }
+
+  // 3. Map draft state to PostgreSQL schema columns
+  const payload = {
+    lat: Number(reportData.coordinates.lat),
+    lng: Number(reportData.coordinates.lng),
+    severity: Number(reportData.severity),
+    description: reportData.description?.trim() || null,
+    status: 'open',
+  };
+
+  // 4. Perform Supabase database insert
+  try {
+    const { data, error } = await client
+      .from('trash_reports')
+      .insert([payload])
+      .select()
+      .single();
+
+    if (error) {
+      const dbErr = new Error(error.message || 'Database insert failed.');
+      dbErr.name = 'DatabaseError';
+      dbErr.code = error.code;
+      throw dbErr;
+    }
+
+    return { success: true, data };
+  } catch (err) {
+    if (err.name === 'ValidationError' || err.name === 'ConfigurationError' || err.name === 'DatabaseError') {
+      throw err;
+    }
+    const netErr = new Error(err.message || 'Network connection failed during report submission.');
+    netErr.name = 'NetworkError';
+    throw netErr;
+  }
 }
 
 /**
  * Subscribes to realtime updates for reports.
- * In Phase 1: Returns a no-op unsubscribe function.
+ * Scheduled for Milestone 4 (Realtime Dashboard).
  *
  * @param {(payload: any) => void} _onUpdate
  * @returns {() => void} unsubscribe function
