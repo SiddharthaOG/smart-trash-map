@@ -8,8 +8,8 @@ export const APP_INFO = {
   tagline: 'Community Litter Reporting',
   description: 'Identify litter hotspots and coordinate community cleanup efforts.',
   currentPhase: {
-    number: 2,
-    title: 'Google Maps Integration',
+    number: 3,
+    title: 'Supabase Data Layer',
     status: 'In Progress',
   },
 };
@@ -93,15 +93,15 @@ export const ROADMAP_PHASES = Object.freeze([
     phase: 2,
     title: 'Google Maps Integration',
     description: 'Mount @vis.gl/react-google-maps, geolocation anchoring, and click-to-capture coordinate handling.',
-    status: 'Current Milestone',
-    active: true,
+    status: 'Completed',
+    active: false,
   },
   {
     phase: 3,
     title: 'Supabase Data Layer',
     description: 'Spin up Supabase DB, trash_reports schema (lat, lng, severity 1-5, status), and report persistence.',
-    status: 'Planned',
-    active: false,
+    status: 'Current Milestone',
+    active: true,
   },
   {
     phase: 4,

@@ -88,14 +88,14 @@ export function AppLayout({
         </div>
       )}
 
-      {/* Understated Civic Tech Footer */}
+{/* Understated Civic Tech Footer */}
       <footer className="border-t border-slate-200/80 bg-white/70 py-4 px-4 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>
             <strong>Smart Trash Map</strong> — Community Litter Reporting
           </span>
           <span className="font-mono text-[11px] text-slate-400">
-            Milestone 1 Architecture: Decoupled Features &amp; Service Contracts
+            Milestone 3 Architecture: Supabase Persistence & Real Database Integration
           </span>
         </div>
       </footer>
