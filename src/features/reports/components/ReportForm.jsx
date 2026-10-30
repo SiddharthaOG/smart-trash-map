@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, MapPin, AlertCircle, Send, CheckCircle2 } from 'lucide-react';
+import { X, MapPin, AlertCircle, Send, CheckCircle2, Loader2, Database } from 'lucide-react';
 import { formatCoordinates } from '../validation.js';
 import { MAX_DESCRIPTION_LENGTH } from '../constants.js';
 import SeveritySelector from './SeveritySelector.jsx';
@@ -11,16 +11,28 @@ export function ReportForm({
   onSeverityChange,
   onDescriptionChange,
   onClose,
+  onSubmit,
+  isSubmitting = false,
+  submitError = null,
+  submitSuccess = false,
+  isConfigured = false,
   className = '',
 }) {
   const coordinatesDisplay = formatCoordinates(draft.coordinates);
   const hasCoordinates = Boolean(draft.coordinates);
   const descriptionLength = (draft.description || '').length;
 
+  const handleFormSubmit = (e) => {
+    e.preventDefault();
+    if (validation.canSubmit && onSubmit && !isSubmitting && isConfigured) {
+      onSubmit(draft);
+    }
+  };
+
   return (
-    <div
+    <form
+      onSubmit={handleFormSubmit}
       className={`bg-white rounded-2xl border border-slate-200/90 shadow-lg flex flex-col overflow-hidden max-h-[85vh] lg:max-h-[calc(100vh-120px)] ${className}`}
-      role="form"
       aria-label="Community litter report form"
     >
       {/* Form Header */}
@@ -52,6 +64,34 @@ export function ReportForm({
 
       {/* Scrollable Form Body */}
       <div className="p-5 space-y-4 overflow-y-auto flex-1">
+        {/* Success Banner */}
+        {submitSuccess && (
+          <div
+            role="status"
+            className="p-3 bg-emerald-50 border border-emerald-300 rounded-xl text-xs text-emerald-900 flex items-center gap-2.5 animate-in fade-in"
+          >
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" aria-hidden="true" />
+            <div>
+              <span className="font-semibold block">Report Recorded</span>
+              <span>Saved to community database. The report feed has been refreshed.</span>
+            </div>
+          </div>
+        )}
+
+        {/* Error Banner */}
+        {submitError && (
+          <div
+            role="alert"
+            className="p-3 bg-rose-50 border border-rose-300 rounded-xl text-xs text-rose-900 flex items-center gap-2.5 animate-in fade-in"
+          >
+            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" aria-hidden="true" />
+            <div>
+              <span className="font-semibold block">Submission Error</span>
+              <span>{submitError}</span>
+            </div>
+          </div>
+        )}
+
         {/* Location Status Section */}
         <div className="space-y-1.5">
           <span className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
@@ -89,6 +129,7 @@ export function ReportForm({
         <SeveritySelector
           value={draft.severity}
           onChange={onSeverityChange}
+          disabled={isSubmitting}
         />
 
         {/* Optional Description */}
@@ -116,9 +157,10 @@ export function ReportForm({
             rows={2}
             value={draft.description}
             onChange={(e) => onDescriptionChange && onDescriptionChange(e.target.value)}
+            disabled={isSubmitting}
             placeholder="e.g. Broken bottles along the park trail entrance..."
             maxLength={MAX_DESCRIPTION_LENGTH + 20}
-            className="w-full rounded-xl border border-slate-300 p-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-700 focus:border-transparent transition resize-none"
+            className="w-full rounded-xl border border-slate-300 p-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-700 focus:border-transparent transition resize-none disabled:bg-slate-100"
           />
           {validation.errors.description && (
             <p className="text-xs text-rose-600 font-medium">
@@ -130,11 +172,13 @@ export function ReportForm({
         {/* Milestone Persistence Notice */}
         <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600 space-y-0.5">
           <div className="flex items-center gap-1.5 font-semibold text-slate-800">
-            <AlertCircle className="w-3.5 h-3.5 text-slate-500 shrink-0" aria-hidden="true" />
-            Milestone 2 State
+            <Database className="w-3.5 h-3.5 text-emerald-700 shrink-0" aria-hidden="true" />
+            Milestone 3: Supabase Persistence
           </div>
           <p className="leading-relaxed text-[11px]">
-            Map pin placement is active. Database persistence will connect in Phase 3 (Supabase).
+            {isConfigured
+              ? 'Database configuration present. Submissions insert real records into the PostgreSQL trash_reports table.'
+              : 'Supabase credentials missing. Configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to save reports.'}
           </p>
         </div>
       </div>
@@ -147,28 +191,31 @@ export function ReportForm({
             variant="outline"
             size="md"
             onClick={onClose}
+            disabled={isSubmitting}
           >
             Cancel
           </Button>
         )}
 
         <Button
-          type="button"
+          type="submit"
           variant="primary"
           size="md"
-          disabled={!validation.canSubmit}
+          disabled={!validation.canSubmit || isSubmitting || !isConfigured}
           className="flex-1"
           title={
-            validation.canSubmit
-              ? 'Ready for submission'
-              : 'Submission locked: coordinates and database persistence require Phases 2 & 3'
+            !isConfigured
+              ? 'Configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to enable database submission'
+              : !validation.canSubmit
+              ? 'Click on the map to set coordinates before submitting'
+              : 'Submit report to PostgreSQL database'
           }
-          icon={Send}
+          icon={isSubmitting ? Loader2 : Send}
         >
-          Submit Report
+          {isSubmitting ? 'Submitting...' : 'Submit Report'}
         </Button>
       </div>
-    </div>
+    </form>
   );
 }
 
