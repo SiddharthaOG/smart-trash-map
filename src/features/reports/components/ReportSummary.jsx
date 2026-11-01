@@ -1,15 +1,44 @@
+
 import React, { useState } from 'react';
-import { Database, Inbox, CheckCircle2, Layers, ArrowUpRight } from 'lucide-react';
+import {
+  Database,
+  Inbox,
+  CheckCircle2,
+  RefreshCw,
+  AlertCircle,
+  MapPin,
+} from 'lucide-react';
 import { ROADMAP_PHASES } from '../../../constants/index.js';
 import Card, { CardHeader, CardBody } from '../../../components/ui/Card.jsx';
 import Badge from '../../../components/ui/Badge.jsx';
 
-export function ReportSummary({ className = '' }) {
-  const [activeTab, setActiveTab] = useState('status'); // 'status' | 'schema' | 'roadmap'
+function formatDate(value) {
+  if (!value) return 'Date unavailable';
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return 'Date unavailable';
+
+  return date.toLocaleString();
+}
+
+export function ReportSummary({
+  className = '',
+  reports = [],
+  isLoading = false,
+  fetchError = null,
+  isConfigured = false,
+  onRefresh,
+}) {
+  const [activeTab, setActiveTab] = useState('status');
+
+  const errorMessage =
+    typeof fetchError === 'string'
+      ? fetchError
+      : fetchError?.message || 'Unable to load community reports.';
 
   return (
     <Card className={`overflow-hidden ${className}`}>
-      {/* Header with Tabs */}
       <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center">
@@ -25,7 +54,6 @@ export function ReportSummary({ className = '' }) {
           </div>
         </div>
 
-        {/* Tab Controls */}
         <div
           role="tablist"
           aria-label="Summary views"
@@ -74,24 +102,125 @@ export function ReportSummary({ className = '' }) {
       </CardHeader>
 
       <CardBody className="p-4 sm:p-5">
-        {/* Tab 1: Live Feed Status (Purposeful Empty State) */}
+        {/* Tab 1: Live Community Reports */}
         {activeTab === 'status' && (
-          <div className="py-6 text-center max-w-md mx-auto">
-            <div className="w-12 h-12 mx-auto rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-3 border border-slate-200">
-              <Inbox className="w-6 h-6" aria-hidden="true" />
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h5 className="text-sm font-bold text-slate-900">
+                  Community Reports
+                </h5>
+                <p className="text-xs text-slate-500">
+                  {reports.length} report{reports.length === 1 ? '' : 's'} retrieved
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={onRefresh}
+                disabled={isLoading || !isConfigured || !onRefresh}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              >
+                <RefreshCw
+                  className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`}
+                  aria-hidden="true"
+                />
+                Refresh
+              </button>
             </div>
-            <h5 className="text-sm font-bold text-slate-900 mb-1">
-              No Community Reports Recorded Yet
-            </h5>
-            <p className="text-xs text-slate-600 leading-relaxed mb-4">
-              Live reports will appear in this feed once Supabase database
-              synchronization and realtime listeners are connected in Phase 3.
-              No synthetic or simulated records are shown.
-            </p>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-medium">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" aria-hidden="true" />
-              Service layer and query interfaces ready
-            </div>
+
+            {!isConfigured ? (
+              <div className="py-6 text-center">
+                <AlertCircle className="w-8 h-8 mx-auto text-amber-500 mb-2" />
+                <h5 className="text-sm font-bold text-slate-900">
+                  Database Not Configured
+                </h5>
+                <p className="text-xs text-slate-600 mt-1">
+                  Configure the Supabase environment variables to load community reports.
+                </p>
+              </div>
+            ) : isLoading ? (
+              <div className="py-8 text-center">
+                <RefreshCw className="w-6 h-6 mx-auto text-emerald-700 animate-spin mb-2" />
+                <p className="text-xs text-slate-600">
+                  Loading community reports...
+                </p>
+              </div>
+            ) : fetchError ? (
+              <div className="py-6 text-center">
+                <AlertCircle className="w-8 h-8 mx-auto text-red-500 mb-2" />
+                <h5 className="text-sm font-bold text-slate-900">
+                  Unable to Load Reports
+                </h5>
+                <p className="text-xs text-red-600 mt-1 mb-3">
+                  {errorMessage}
+                </p>
+                <button
+                  type="button"
+                  onClick={onRefresh}
+                  disabled={!onRefresh}
+                  className="text-xs font-semibold text-emerald-800 hover:underline disabled:opacity-50"
+                >
+                  Try again
+                </button>
+              </div>
+            ) : reports.length === 0 ? (
+              <div className="py-6 text-center max-w-md mx-auto">
+                <div className="w-12 h-12 mx-auto rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-3 border border-slate-200">
+                  <Inbox className="w-6 h-6" aria-hidden="true" />
+                </div>
+                <h5 className="text-sm font-bold text-slate-900 mb-1">
+                  No Community Reports Yet
+                </h5>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  No reports have been recorded. New community submissions will appear here.
+                </p>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 mt-4 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-medium">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" aria-hidden="true" />
+                  Database connection configured
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {reports.map((report) => (
+                  <article
+                    key={report.id}
+                    className="rounded-xl border border-slate-200 bg-white p-3.5 space-y-2.5"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-slate-900">
+                          Report #{String(report.id).slice(0, 8)}
+                        </p>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                          {formatDate(report.created_at)}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Badge variant="info">
+                          Severity {report.severity ?? 'N/A'}/5
+                        </Badge>
+                        <Badge variant="success">
+                          {report.status || 'Unknown'}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-slate-700 leading-relaxed break-words">
+                      {report.description?.trim() || 'No description provided.'}
+                    </p>
+
+                    <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+                      <MapPin className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                      <span>
+                        {Number(report.lat).toFixed(5)}, {Number(report.lng).toFixed(5)}
+                      </span>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -113,13 +242,13 @@ export function ReportSummary({ className = '' }) {
               <div className="pl-4">lng <span className="text-amber-300">double precision NOT NULL</span>,</div>
               <div className="pl-4">severity <span className="text-amber-300">smallint CHECK (severity &gt;= 1 AND severity &lt;= 5)</span>,</div>
               <div className="pl-4">description <span className="text-amber-300">text</span>,</div>
-              <div className="pl-4">status <span className="text-amber-300">text DEFAULT 'reported'</span>,</div>
+              <div className="pl-4">status <span className="text-amber-300">text DEFAULT 'open'</span>,</div>
               <div className="pl-4">created_at <span className="text-amber-300">timestamptz DEFAULT now()</span></div>
               <div>);</div>
             </div>
 
             <p className="text-[11px] text-slate-500 leading-normal">
-              Directly aligned with proposal specifications. Public anonymous pin drops
+              Directly aligned with the current application data contract. Public anonymous pin drops
               streamline user interaction without initial authentication overhead.
             </p>
           </div>
