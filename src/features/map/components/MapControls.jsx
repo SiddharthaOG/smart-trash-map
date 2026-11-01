@@ -1,12 +1,16 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useMap } from '@vis.gl/react-google-maps';
-import { Navigation, Plus, Minus, Layers, Loader2 } from 'lucide-react';
+import { Navigation, Plus, Minus, Layers, Loader2, Crosshair } from 'lucide-react';
 
-export function MapControls({ className = '' }) {
+export function MapControls({
+  className = '',
+  onLocateMe,
+  onRecenterUser,
+  isLocating,
+  hasUserLocation,
+}) {
   const map = useMap();
-  const [isLocating, setIsLocating] = useState(false);
-  const [geoError, setGeoError] = useState(null);
-  const [mapTypeId, setMapTypeId] = useState('roadmap');
+  const [mapTypeId, setMapTypeId] = React.useState('roadmap');
 
   const handleZoomIn = () => {
     if (!map) return;
@@ -20,47 +24,19 @@ export function MapControls({ className = '' }) {
     map.setZoom(current - 1);
   };
 
-  const handleLocateMe = () => {
-    if (typeof window === 'undefined' || !navigator.geolocation) {
-      setGeoError('Geolocation is not supported by your browser.');
-      return;
-    }
-
-    setIsLocating(true);
-    setGeoError(null);
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setIsLocating(false);
-        const coords = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        };
-        if (map) {
-          map.panTo(coords);
-          map.setZoom(16);
-        }
-      },
-      (err) => {
-        setIsLocating(false);
-        let msg = 'Location request unavailable.';
-        if (err.code === 1) {
-          msg = 'Location access was denied.';
-        } else if (err.code === 3) {
-          msg = 'Location request timed out.';
-        }
-        setGeoError(msg);
-        setTimeout(() => setGeoError(null), 4000);
-      },
-      { enableHighAccuracy: true, timeout: 8000 }
-    );
-  };
-
   const handleToggleLayer = () => {
     if (!map) return;
     const nextType = mapTypeId === 'roadmap' ? 'hybrid' : 'roadmap';
     map.setMapTypeId(nextType);
     setMapTypeId(nextType);
+  };
+
+  const handleLocationAction = () => {
+    if (hasUserLocation) {
+      onRecenterUser?.();
+    } else {
+      onLocateMe?.();
+    }
   };
 
   return (
@@ -69,27 +45,33 @@ export function MapControls({ className = '' }) {
       role="toolbar"
       aria-label="Map navigation controls"
     >
-      {/* Geolocation Button */}
+      {/* Geolocation / Recenter Button */}
       <div className="relative group">
         <button
           type="button"
-          onClick={handleLocateMe}
+          onClick={handleLocationAction}
           disabled={isLocating}
-          aria-label="Locate my position"
-          className="w-10 h-10 rounded-lg bg-white/95 backdrop-blur-xs border border-slate-300/80 shadow-md flex items-center justify-center text-slate-700 hover:text-emerald-800 hover:bg-slate-50 active:scale-95 transition cursor-pointer disabled:opacity-50"
-          title="Center map on your current location"
+          aria-label={hasUserLocation ? 'Recenter on your location' : 'Locate my position'}
+          className={`w-10 h-10 rounded-lg bg-white/95 backdrop-blur-xs border shadow-md flex items-center justify-center transition cursor-pointer active:scale-95 disabled:opacity-50 ${
+            hasUserLocation
+              ? 'bg-sky-50 text-sky-700 hover:bg-sky-100 border-sky-300/80'
+              : 'bg-white/95 text-slate-700 hover:text-emerald-800 hover:bg-slate-50 border-slate-300/80'
+          }`}
+          title={hasUserLocation ? 'Recenter map on your location' : 'Center map on your current location'}
         >
           {isLocating ? (
             <Loader2 className="w-4 h-4 animate-spin text-emerald-700" aria-hidden="true" />
+          ) : hasUserLocation ? (
+            <Crosshair className="w-4 h-4 text-sky-600" aria-hidden="true" />
           ) : (
             <Navigation className="w-4 h-4" aria-hidden="true" />
           )}
         </button>
 
-        {geoError && (
-          <div className="absolute right-12 top-0 whitespace-nowrap bg-rose-900 text-white text-[11px] font-medium px-2.5 py-1 rounded shadow-md z-30">
-            {geoError}
-          </div>
+        {hasUserLocation && (
+          <span className="hidden sm:group-hover:block absolute right-12 top-2 whitespace-nowrap bg-sky-900 text-white text-[11px] font-medium px-2 py-1 rounded shadow-md pointer-events-none z-30">
+            Your Location Active
+          </span>
         )}
       </div>
 

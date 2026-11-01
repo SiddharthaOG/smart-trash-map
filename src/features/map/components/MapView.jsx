@@ -1,10 +1,23 @@
-import React from 'react';
-import { Map, AdvancedMarker, Pin } from '@vis.gl/react-google-maps';
-import { MapPin, Info, Compass } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { Map, AdvancedMarker, Pin, useMap } from '@vis.gl/react-google-maps';
+import { MapPin, Info } from 'lucide-react';
+import UserLocationMarker from './UserLocationMarker.jsx';
 import { SEVERITY_LEVELS } from '../../../constants/index.js';
 import { config } from '../../../app/config.js';
 import { formatCoordinates } from '../../reports/validation.js';
 import MapControls from './MapControls.jsx';
+// Define this outside MapView, after imports.
+function MapReadyHandler({ onMapReady }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (map && onMapReady) {
+      onMapReady(map);
+    }
+  }, [map, onMapReady]);
+
+  return null;
+}
 
 export function MapView({
   selectedCoordinates = null,
@@ -12,6 +25,13 @@ export function MapView({
   onOpenReportForm,
   isReportOpen = false,
   className = '',
+  onMapReady,
+  userLocation,
+  onLocateMe,
+  onRecenterUser,
+  isLocating,
+  geoError,
+  onDismissGeoError,
 }) {
   const hasKey = Boolean(config.maps.apiKey);
   const activeCoordinatesDisplay = selectedCoordinates
@@ -45,6 +65,11 @@ export function MapView({
           onClick={handleMapClick}
           className="w-full h-full min-h-[460px]"
         >
+          <MapReadyHandler onMapReady={onMapReady} />
+          {/* User's Current Location */}
+          {userLocation && (
+            <UserLocationMarker position={userLocation} />
+          )}
           {/* Active Pin Marker at Selected Coordinates */}
           {selectedCoordinates && (
             <AdvancedMarker
@@ -62,9 +87,14 @@ export function MapView({
 
           {/* Floating Map Controls mounted inside Map so useMap() binds cleanly */}
           <div className="absolute top-4 right-4 z-20">
-            <MapControls />
+            <MapControls
+              onLocateMe={onLocateMe}
+              onRecenterUser={onRecenterUser}
+              isLocating={isLocating}
+              hasUserLocation={Boolean(userLocation)}
+            />
           </div>
-        </Map>
+          </Map>
       ) : (
         <div className="w-full h-full flex items-center justify-center p-6 text-center bg-[#ecf2eb]">
           <div className="max-w-md bg-white p-6 rounded-2xl shadow-md border border-emerald-900/10">
@@ -73,6 +103,26 @@ export function MapView({
             <p className="text-xs text-slate-600 mb-4">
               Configure <code className="bg-slate-100 px-1 py-0.5 rounded font-mono">VITE_GOOGLE_MAPS_API_KEY</code> to activate the live map canvas.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Geolocation Error Notice */}
+      {geoError && (
+        <div
+          role="alert"
+          className="absolute top-16 right-4 z-30 max-w-xs rounded-lg bg-rose-900 px-3 py-2 text-xs text-white shadow-lg"
+        >
+          <div className="flex items-start gap-2">
+            <span>{geoError}</span>
+            <button
+              type="button"
+              onClick={onDismissGeoError}
+              aria-label="Dismiss location error"
+              className="font-bold hover:text-rose-200"
+            >
+              ×
+            </button>
           </div>
         </div>
       )}
