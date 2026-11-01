@@ -1,7 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { APIProvider } from '@vis.gl/react-google-maps';
 import AppLayout from '../components/layout/AppLayout.jsx';
-import { MapView, useMapSelection } from '../features/map/index.js';
+import {
+  MapView,
+  LocationPromptModal,
+  useMapSelection,
+  useUserLocation,
+} from '../features/map/index.js';
 import {
   ReportForm,
   ReportSummary,
@@ -36,6 +41,43 @@ export function App() {
 
   // Map Feature state & hooks
   const { selectedCoordinates, selectCoordinates } = useMapSelection();
+  // Geolocation & User Location state
+const {
+  userLocation,
+  isPromptOpen,
+  isLocating,
+  errorMessage: geoError,
+  promptLocationPermission,
+  dismissPrompt,
+  confirmAndRequestLocation,
+  setErrorMessage: setGeoError,
+} = useUserLocation();
+
+// Map instance reference for recentering
+const mapRef = React.useRef(null);
+
+const handleMapReady = useCallback((map) => {
+  mapRef.current = map;
+}, []);
+
+const recenterMap = useCallback((coords) => {
+  if (!mapRef.current || !coords) return;
+  mapRef.current.panTo(coords);
+  mapRef.current.setZoom(16);
+}, []);
+
+const handleConfirmLocation = async () => {
+  const coords = await confirmAndRequestLocation();
+  if (coords) recenterMap(coords);
+};
+
+const handleRecenterUser = () => {
+  if (userLocation) {
+    recenterMap(userLocation);
+  } else {
+    promptLocationPermission();
+  }
+};
 
   // Reports Feature state & hooks
   const {
@@ -150,9 +192,14 @@ export function App() {
       setIsSubmittingReport(false);
     }
   };
-
+  
   return (
     <APIProvider apiKey={config.maps.apiKey}>
+      <LocationPromptModal
+      isOpen={isPromptOpen}
+      onConfirm={handleConfirmLocation}
+      onDismiss={dismissPrompt}
+    />
       {quotaExceeded && (
         <div className="bg-amber-50 border-b border-amber-200 text-amber-900 px-4 py-2 text-xs text-center sticky top-0 z-50 shadow-xs">
           <span>
@@ -228,10 +275,17 @@ export function App() {
           <div className="h-[480px] sm:h-[540px] xl:h-[580px] w-full">
             <MapView
               selectedCoordinates={selectedCoordinates}
+              userLocation={userLocation}
               onSelectCoordinates={handleSelectCoordinates}
               onOpenReportForm={handleToggleReport}
+              onLocateMe={promptLocationPermission}
+              onRecenterUser={handleRecenterUser}
+              isLocating={isLocating}
+              geoError={geoError}
+              onDismissGeoError={() => setGeoError(null)}
+              onMapReady={handleMapReady}
               isReportOpen={isReportOpen}
-            />
+            />  
           </div>
 
           {/* Reports Summary & Data Schema Hub */}
